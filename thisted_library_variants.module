@@ -1,0 +1,63 @@
+<?php
+/**
+ * @file
+ * Library panel variant generator.
+ */
+
+/**
+ * Implements hook_node_insert().
+ *
+ * Act when a node is inserted and trigger panel variant creation.
+ */
+function thisted_library_variants_node_insert($node) {
+  if ($node->type == 'ding_library') {
+    thisted_library_variants_create_library_variant($node);
+  }
+}
+
+/**
+ * Create a panel variant based on the node created.
+ */
+function thisted_library_variants_create_library_variant($node) {
+  if (!is_object($node) || !isset($node->nid)) {
+    return FALSE;
+  }
+
+  $page = 'node_view';
+  $task = page_manager_get_task($page);
+  ctools_get_plugins('page_manager', 'task_handlers', 'panel_context');
+
+  $handlers = page_manager_load_sorted_handlers($task, '', TRUE);
+  // @todo
+  // This is a hardcoded base panel variant. Perhaps a backend UI select?
+  $handler = $handlers['node_view_panel_context_3'];
+
+  if (empty($handler)) {
+    return FALSE;
+  }
+
+  $nid = $node->nid;
+  // Normally, panels do not support specific panel to node id mapping, so use
+  // php code instead.
+  $php_code = '$item = menu_get_object();if (isset($item->nid) && $item->nid == ' . $nid . ') {return TRUE;}return FALSE;';
+
+  $php_filter = array(
+    'name' => 'php',
+    'settings' => array(
+      'description' => t('Node being viewed has id "@nid"', array('@nid' => $nid)),
+      'php' => $php_code,
+    ),
+    'not' => FALSE,
+  );
+
+  $handler_name = 'node_view_panel_context_nid_' . $nid;
+  $variant_title = t('Library (@library)', array('@library' => $node->title));
+  $pipeline = module_exists('panels_ipe') ? 'ipe' : 'standard';
+  $handler->name = $handler_name;
+  $handler->conf['title'] = $variant_title;
+  $handler->conf['pipeline'] = $pipeline;
+  $handler->conf['access']['plugins'][] = $php_filter;
+  $handler->weight = -50;
+
+  page_manager_save_task_handler($handler);
+}
