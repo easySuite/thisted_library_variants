@@ -3,3 +3,4 @@ description = Generates a new page variant for each created library node.
 core = 7.x
 version = 0.1
 package = Thisted
+dependencies[] = "panels_ipe"
